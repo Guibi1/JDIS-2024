@@ -9,7 +9,7 @@ import { Consts } from '../core/constants.js';
  */
 class MyBot {
     constructor() {
-        this.name = 'name_of_my_super_cool_bot';
+        this.name = 'Isabella';
         this.state = null;
     }
 
@@ -40,30 +40,7 @@ class MyBot {
      *                                  à la rotation donnée en radian.
      *
      * 
-     * (en) This method is called at every game tick. You can define the behavior
-     *      of your bot here. It must return a list of actions that will be executed 
-     *      by the server.
-     * 
-     *      List of possible actions:
-     *      - MoveAction({x, y})        allows you to direct your bot, it will move at a 
-     *                                  constant speed to this point.
-     * 
-     *      - ShootAction({x, y})       if you have the cannon as a weapon, it will shoot 
-     *                                  at the given coordinate.
-     * 
-     *      - SaveAction([...])         allows you to store 100 bytes on the server. Upon 
-     *                                  reconnection, these data will be returned to you 
-     *                                  by the server.
-     * 
-     *      - SwitchWeaponAction(id)    allows you to change weapons. By default, your bot
-     *                                  is not armed. Here are your choices:
-     *                                      Weapon.None
-     *                                      Weapon.Gun
-     *                                      Weapon.Blade
-     * 
-     *      - BladeRotateAction(rad)    if you have the blade as a weapon, you can set your
-     *                                  weapon to the given rotation in radians.
-     * 
+    
      * @param {Model.GameState} game_state 
      * @returns{Model.Actions}
      */
