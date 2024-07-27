@@ -141,7 +141,7 @@ export class MyBot {
 
         this.oldPos = isabella.pos;
 
-        if (closestPlayer.dist < Consts.Blade.LENGTH) {
+        if (closestPlayer.dist < Consts.Blade.LENGTH * 30) {
             return [
                 new MoveAction(this.move),
                 new SwitchWeaponAction(Weapons.Blade),
