@@ -1,7 +1,8 @@
 import type { Action } from "./actions.js";
-import { MoveAction, ShootAction } from "./actions.js";
+import { BladeRotateAction, MoveAction, ShootAction, SwitchWeaponAction } from "./actions.js";
 import { Consts } from "./constants.js";
-import type { GameState, MapState, Point, Walls, Projectile, Player } from "./types.js";
+import type { GameState, MapState, Player, Point, Projectile, Walls } from "./types.js";
+import Weapons from "./weapons.js";
 
 /**
  * (fr) Cette classe représente votre bot. Vous pouvez y définir des attributs et des méthodes qui
@@ -140,10 +141,20 @@ export class MyBot {
 
         this.oldPos = isabella.pos;
 
+        if (closestPlayer.dist < Consts.Blade.LENGTH) {
+            return [
+                new MoveAction(this.move),
+                new SwitchWeaponAction(Weapons.Blade),
+                new BladeRotateAction(calculateAngle(closestPlayer.player.pos)),
+            ];
+        }
+
+        if (isabella.current_weapon === Weapons.Blade) {
+            return [new MoveAction(this.move), new SwitchWeaponAction(Weapons.Canon)];
+        }
+
         return [
             new MoveAction(this.move),
-            // new MoveAction(closestCoin.pos),
-            // new SwitchWeaponAction(Weapons.Canon),
             new ShootAction(
                 calculateInterceptionPoint(isabella.pos, closestPlayer.player.pos, closestPlayer.player.dest),
             ),
@@ -300,20 +311,15 @@ function calculateInterceptionPoint(shooterPosition: Point, targetPosition: Poin
 }
 
 function isGonnaTouch(bullet: Projectile, isabella: Player) {
-        
-    const point = calculateInterceptionPoint(bullet.pos, isabella.pos, isabella.dest);
-    const pointDest = calculateInterceptionPoint(bullet.pos, isabella.pos, isabella.dest);
+    const pointWhereCouldHit = calculateInterceptionPoint(bullet.pos, isabella.pos, isabella.dest);
+    const toDestination = {
+        x: bullet.dest.x - bullet.pos.x,
+        y: bullet.dest.y - bullet.pos.y,
+    };
 
-    return calculateAngle(distance(point,bullet.pos),distance(bullet.pos,bullet.dest)) < 10
-    
+    return Math.abs(calculateAngle(pointWhereCouldHit) - calculateAngle(toDestination)) < 10;
 }
 
-function calculateAngle(x: number, y: number): number {
-    // Calculer l'angle en radians
-    const angleInRadians = Math.atan2(y, x);
-
-    // Convertir l'angle en degrés
-    const angleInDegrees = angleInRadians * (180 / Math.PI);
-
-    return angleInDegrees;
+function calculateAngle(pos: Point): number {
+    return Math.atan2(pos.y, pos.x);
 }
