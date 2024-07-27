@@ -5,7 +5,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "bun run index.js"
+    "dev": "bun run .",
+    "start": "bun run . -r"
   },
   "author": "",
   "license": "ISC",
@@ -15,7 +16,8 @@
   },
   "types": "./types/type.d.ts",
   "devDependencies": {
-    "@biomejs/biome": "^1.8.3"
+    "@biomejs/biome": "^1.8.3",
+    "bun-types":"^1.1.21"
   },
   "trustedDependencies": [
     "@biomejs/biome"
