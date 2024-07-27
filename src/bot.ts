@@ -50,21 +50,30 @@ export class MyBot {
             return [];
         }
 
-        let closestCoinDistance!: number;
-        let closestCoin!: Coin;
-        for (const coin of gameState.coins) {
-            const dist = distance(coin.pos, isabella.pos);
-            if (!closestCoin || dist < closestCoinDistance) {
-                closestCoinDistance = dist;
-                closestCoin = coin;
-            }
-        }
+        const closestCoin = gameState.coins.reduce(
+            (prev, coin) => {
+                const dist = distance(coin.pos, isabella.pos);
+                if (dist < prev.dist) return { coin, dist };
+                return prev;
+            },
+            { coin: gameState.coins[0], dist: Number.POSITIVE_INFINITY },
+        ).coin;
+
+        const closestPlayer = gameState.players.reduce(
+            (prev, player) => {
+                if (player.name === this.name) return prev;
+
+                const dist = distance(player.pos, isabella.pos);
+                if (dist < prev.dist) return { player, dist };
+                return prev;
+            },
+            { player: gameState.players[0], dist: Number.POSITIVE_INFINITY },
+        ).player;
 
         return [
             new MoveAction(closestCoin.pos),
-            new ShootAction({ x: 11.2222, y: 13.547 }),
-            new SwitchWeaponAction(Weapons.Blade),
-            new SaveAction(new TextEncoder().encode("Hello, world!")),
+            new SwitchWeaponAction(Weapons.Canon),
+            new ShootAction(closestPlayer.pos),
         ];
     }
 
