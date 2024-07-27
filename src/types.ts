@@ -45,3 +45,5 @@ export interface GameState {
     players: Player[];
     coins: Coin[];
 }
+
+export type Walls = { top: boolean; left: boolean; right: boolean; bottom: boolean };

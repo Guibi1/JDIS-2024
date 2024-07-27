@@ -1,7 +1,7 @@
 import type { Action } from "./actions.js";
-import { MoveAction, SaveAction, ShootAction, SwitchWeaponAction } from "./actions.js";
-import type { Coin, GameState, MapState, Point } from "./types.js";
-import Weapons from "./weapons.js";
+import { MoveAction, ShootAction } from "./actions.js";
+import { Consts } from "./constants.js";
+import type { GameState, MapState, Point, Walls } from "./types.js";
 
 /**
  * (fr) Cette classe représente votre bot. Vous pouvez y définir des attributs et des méthodes qui
@@ -10,9 +10,9 @@ import Weapons from "./weapons.js";
 export class MyBot {
     private name = "Isabella";
     private state: null | MapState = null;
-    private move: MoveAction = new MoveAction({x:0,y:0});
-    private oldPos: Point ;
-    private map: Walls[][];
+    private move!: MoveAction;
+    private oldPos!: Point;
+    private map!: Walls[][];
 
     constructor() {
         this.name = "Isabella";
@@ -44,7 +44,6 @@ export class MyBot {
      *                                  à la rotation donnée en radian.
      */
     on_tick(gameState: GameState): Action[] {
-        console.log("🚀 ~ MyBot ~ on_tick ~ game_state:", gameState);
         console.log(`Current tick: ${gameState.tick}`);
 
         const isabella = gameState.players.find((p) => p.name === this.name);
@@ -56,7 +55,9 @@ export class MyBot {
         const closestCoin = gameState.coins.reduce(
             (prev, coin) => {
                 const dist = distance(coin.pos, isabella.pos);
-                if (dist < prev.dist) return { coin, dist };
+                if (dist < prev.dist) {
+                    return { coin, dist };
+                }
                 return prev;
             },
             { coin: gameState.coins[0], dist: Number.POSITIVE_INFINITY },
@@ -64,6 +65,7 @@ export class MyBot {
 
         const closestPlayer = gameState.players.reduce(
             (prev, player) => {
+                if (player.health <= 0) return prev;
                 if (player.name === this.name) return prev;
 
                 const dist = distance(player.pos, isabella.pos);
@@ -71,7 +73,8 @@ export class MyBot {
                 return prev;
             },
             { player: gameState.players[0], dist: Number.POSITIVE_INFINITY },
-        ).player;
+        );
+        console.log("🚀 ~ MyBot ~ on_tick ~ closestPlayer:", closestPlayer.player.name);
 
         isabella.pos.y += 1;
         if (this.oldPos === isabella.pos) {
@@ -105,8 +108,10 @@ export class MyBot {
         return [
             this.move,
             new MoveAction(closestCoin.pos),
-            new SwitchWeaponAction(Weapons.Canon),
-            new ShootAction(closestPlayer.pos),
+            // new SwitchWeaponAction(Weapons.Canon),
+            new ShootAction(
+                calculateInterceptionPoint(isabella.pos, closestPlayer.player.pos, closestPlayer.player.dest),
+            ),
         ];
     }
 
@@ -115,7 +120,6 @@ export class MyBot {
      *      actions à effectuer au début de la partie.
      */
     on_start(state: MapState) {
-        console.log("🚀 ~ MyBot ~ on_start ~ state:", state);
         this.state = state;
         this.move = new MoveAction({ x: 0, y: 0 });
         state.map;
@@ -133,7 +137,6 @@ export class MyBot {
      *      à effectuer à la fin de la partie.
      */
     on_end() {
-        console.log("🚀 ~ MyBot ~ on_end ~ state:", this.state);
         this.state = null;
     }
 
@@ -181,4 +184,60 @@ function distance(p1: Point, p2: Point) {
     return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
 }
 
-type Walls = { top: boolean; left: boolean; right: boolean; bottom: boolean };
+// Utility function to calculate the magnitude of a point
+function hypothenuse(point: Point): number {
+    return Math.sqrt(point.x * point.x + point.y * point.y);
+}
+
+// Calculate the interception point
+function calculateInterceptionPoint(shooterPosition: Point, targetPosition: Point, targetDestination: Point): Point {
+    const toDestination = {
+        x: targetDestination.x - targetPosition.x,
+        y: targetDestination.y - targetPosition.y,
+    };
+    const distanceToDestination = hypothenuse(toDestination);
+    if (distanceToDestination === 0) return targetDestination; // Target is already at destination
+
+    const targetVelocity = {
+        x: (toDestination.x / distanceToDestination) * Consts.Player.SPEED,
+        y: (toDestination.y / distanceToDestination) * Consts.Player.SPEED,
+    };
+
+    // Relative position (vector from shooter to target)
+    const relativePosition = {
+        x: targetPosition.x - shooterPosition.x,
+        y: targetPosition.y - shooterPosition.y,
+    };
+
+    // Coefficients for the quadratic equation (a*t^2 + b*t + c = 0)
+    const a = hypothenuse(targetVelocity) ** 2 - Consts.Projectile.SPEED ** 2;
+    const b = 2 * (targetVelocity.x * relativePosition.x + targetVelocity.y * relativePosition.y);
+    const c = hypothenuse(relativePosition) ** 2;
+
+    // Calculate the discriminant
+    const discriminant = b * b - 4 * a * c;
+
+    // If the discriminant is negative, there's no real solution (no interception point)
+    if (discriminant < 0) {
+        return { x: 0, y: 0 };
+    }
+
+    // Calculate the two possible times to impact (quadratic formula)
+    const sqrtDiscriminant = Math.sqrt(discriminant);
+    const t1 = (-b + sqrtDiscriminant) / (2 * a);
+    const t2 = (-b - sqrtDiscriminant) / (2 * a);
+
+    // Choose the smallest positive time as the valid solution
+    const t = t1 >= 0 && t1 < t2 ? t1 : t2;
+
+    // If t is negative, it means the projectile cannot intercept the target in the future
+    if (t < 0) {
+        return { x: 0, y: 0 };
+    }
+
+    // Calculate the interception point (future position of the target)
+    return {
+        x: targetPosition.x + targetVelocity.x * t + Consts.Player.SIZE / 2,
+        y: targetPosition.y + targetVelocity.y * t + Consts.Player.SIZE / 2,
+    };
+}
