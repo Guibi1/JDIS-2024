@@ -1,7 +1,7 @@
 import type { Action } from "./actions.js";
 import { MoveAction, ShootAction } from "./actions.js";
 import { Consts } from "./constants.js";
-import type { GameState, MapState, Point, Walls } from "./types.js";
+import type { GameState, MapState, Point, Walls, Projectile, Player } from "./types.js";
 
 /**
  * (fr) Cette classe représente votre bot. Vous pouvez y définir des attributs et des méthodes qui
@@ -297,4 +297,23 @@ function calculateInterceptionPoint(shooterPosition: Point, targetPosition: Poin
         x: targetPosition.x + targetVelocity.x * t + Consts.Player.SIZE / 2,
         y: targetPosition.y + targetVelocity.y * t + Consts.Player.SIZE / 2,
     };
+}
+
+function isGonnaTouch(bullet: Projectile, isabella: Player) {
+        
+    const point = calculateInterceptionPoint(bullet.pos, isabella.pos, isabella.dest);
+    const pointDest = calculateInterceptionPoint(bullet.pos, isabella.pos, isabella.dest);
+
+    return calculateAngle(distance(point,bullet.pos),distance(bullet.pos,bullet.dest)) < 10
+    
+}
+
+function calculateAngle(x: number, y: number): number {
+    // Calculer l'angle en radians
+    const angleInRadians = Math.atan2(y, x);
+
+    // Convertir l'angle en degrés
+    const angleInDegrees = angleInRadians * (180 / Math.PI);
+
+    return angleInDegrees;
 }
