@@ -10,8 +10,8 @@ import Weapons from "./weapons.js";
 export class MyBot {
     private name = "Isabella";
     private state: null | MapState = null;
-    private move: MoveAction;
-    private oldPos: Point;
+    private move: MoveAction = new MoveAction({x:0,y:0});
+    private oldPos: Point ;
     private map: Walls[][];
 
     constructor() {
@@ -121,6 +121,7 @@ export class MyBot {
         state.map;
 
         this.map = new Array(20).map((_, x) => {
+
             return new Array(20).map((_, y) => {
                 return { top: y === 0, left: x === 0, right: x === 19, bottom: y === 19 };
             });
@@ -134,6 +135,45 @@ export class MyBot {
     on_end() {
         console.log("🚀 ~ MyBot ~ on_end ~ state:", this.state);
         this.state = null;
+    }
+
+    bfs(start: Point, goal: Point): Point[] {
+        const queue: { pos: Point; path: Point[] }[] = [{ pos: start, path: [] }];
+        const visited = new Set<string>();
+
+        const directions = [
+            { x: 0, y: -1 }, // up
+            { x: 1, y: 0 }, // right
+            { x: 0, y: 1 }, // down
+            { x: -1, y: 0 } // left
+        ];
+
+        const inBounds = (x: number, y: number) => x >= 0 && x < 20 && y >= 0 && y < 20;
+        const hashPoint = (p: Point) => `${p.x},${p.y}`;
+
+        while (queue.length > 0) {
+            const { pos, path } = queue.shift();
+            if (hashPoint(pos) === hashPoint(goal)) return path;
+
+            for (const dir of directions) {
+                const newPos = { x: pos.x + dir.x, y: pos.y + dir.y };
+                if (inBounds(newPos.x, newPos.y) && !visited.has(hashPoint(newPos)) && this.isPassable(pos, newPos)) {
+                    visited.add(hashPoint(newPos));
+                    queue.push({ pos: newPos, path: [...path, newPos] });
+                }
+            }
+        }
+
+        return [];
+    }
+
+    isPassable(current: Point, next: Point): boolean {
+        const [dx, dy] = [next.x - current.x, next.y - current.y];
+        if (dx === 1) return !this.map[current.x][current.y].right && !this.map[next.x][next.y].left;
+        if (dx === -1) return !this.map[current.x][current.y].left && !this.map[next.x][next.y].right;
+        if (dy === 1) return !this.map[current.x][current.y].bottom && !this.map[next.x][next.y].top;
+        if (dy === -1) return !this.map[current.x][current.y].top && !this.map[next.x][next.y].bottom;
+        return false;
     }
 }
 
