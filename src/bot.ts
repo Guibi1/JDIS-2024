@@ -12,6 +12,7 @@ export class MyBot {
     private state: null | MapState = null;
     private oldPos!: Point;
     private map!: Walls[][];
+    private move!: Point;
 
     constructor() {
         this.name = "Isabella";
@@ -51,15 +52,21 @@ export class MyBot {
             return [];
         }
 
+        const isaCell = posToCell(isabella.pos);
+        const isaDestCell = posToCell(isabella.dest);
+
         const closestCoin = gameState.coins.reduce(
             (prev, coin) => {
                 const dist = distance(coin.pos, isabella.pos);
+                const coinIsSame = equals(isaCell, posToCell(coin.pos));
+
+                if (!coinIsSame && prev.same) return prev;
                 if (dist < prev.dist) {
-                    return { coin, dist };
+                    return { coin, dist, same: coinIsSame };
                 }
                 return prev;
             },
-            { coin: gameState.coins[0], dist: Number.POSITIVE_INFINITY },
+            { coin: gameState.coins[0], dist: Number.POSITIVE_INFINITY, same: false },
         ).coin;
 
         const closestPlayer = gameState.players.reduce(
@@ -76,6 +83,20 @@ export class MyBot {
         console.log("ClosestPlayer:", closestPlayer.player.name);
         console.log("Positions:", this.oldPos, isabella.pos);
 
+        const getRealWorldCoords = (cell: Point | null) => {
+            if (!cell) return null;
+
+            // Go to coin
+            if (equals(cell, posToCell(closestCoin.pos))) {
+                console.log("ok coin time");
+                return closestCoin.pos;
+            }
+
+            const x = Math.min(Math.max(isabella.pos.x, cell.x * 300 + 50), cell.x * 300 + 250);
+            const y = Math.min(Math.max(isabella.pos.y, cell.y * 300 + 50), cell.y * 300 + 250);
+            return { x, y };
+        };
+
         if (equals(this.oldPos, isabella.pos)) {
             const cellX = isabella.pos.x / 300;
             const cellY = isabella.pos.y / 300;
@@ -86,9 +107,7 @@ export class MyBot {
             const differenceX = cellX - roundedCellX;
             const differenceY = cellY - roundedCellY;
 
-            const cell = posToCell(isabella.dest);
-            const isaCell = posToCell(isabella.pos);
-            const [dx, dy] = [cell.x - isaCell.x, cell.y - isaCell.y];
+            const [dx, dy] = [isaDestCell.x - isaCell.x, isaDestCell.y - isaCell.y];
 
             if (dx !== 0) {
                 if (differenceX <= 0.16) {
@@ -103,35 +122,26 @@ export class MyBot {
                     this.map[roundedCellX][roundedCellY].bottom = true;
                 }
             }
+
+            this.move = getRealWorldCoords(this.bfs(isaCell, posToCell(closestCoin.pos))) || closestCoin.pos;
         }
 
-        const getRealWorldCoords = (cell: Point | null) => {
-            if (!cell) return null;
-
-            // Go to coin
-            if (equals(cell, posToCell(closestCoin.pos))) {
-                console.log("ok coin time");
-                return closestCoin.pos;
-            }
-
-            const isaCell = posToCell(isabella.pos);
-            const [dx, dy] = [cell.x - isaCell.x, cell.y - isaCell.y];
-            if (dx === 0) {
-                const x = Math.min(Math.max(isabella.pos.x, cell.x * 300 + 50), cell.x * 300 + 250);
-                return { x, y: cell.y * 300 + 150 };
-            }
-            if (dy === 0) {
-                const y = Math.min(Math.max(isabella.pos.y, cell.y * 300 + 50), cell.y * 300 + 250);
-                return { x: cell.x * 300 + 150, y };
-            }
-
-            return { x: cell.x * 300 + 150, y: cell.y * 300 + 150 };
-        };
+        if (
+            !(
+                equals(isaCell, isaDestCell) ||
+                isabella.pos.x % 300 < 20 ||
+                isabella.pos.x % 300 > 280 ||
+                isabella.pos.y % 300 < 20 ||
+                isabella.pos.y % 300 > 280
+            )
+        ) {
+            this.move = getRealWorldCoords(this.bfs(isaCell, posToCell(closestCoin.pos))) || closestCoin.pos;
+        }
 
         this.oldPos = isabella.pos;
+
         return [
-            // this.move,
-            new MoveAction(getRealWorldCoords(this.bfs(isabella.pos, closestCoin.pos)) || closestCoin.pos),
+            new MoveAction(this.move),
             // new MoveAction(closestCoin.pos),
             // new SwitchWeaponAction(Weapons.Canon),
             new ShootAction(
@@ -164,13 +174,13 @@ export class MyBot {
     }
 
     bfs(start: Point, goal: Point): Point | null {
-        const queue: { pos: Point; path: Point[] }[] = [{ pos: posToCell(start), path: [] }];
+        const queue: { pos: Point; path: Point[] }[] = [{ pos: start, path: [] }];
         const visited = new Set<string>();
 
         const inBounds = (x: number, y: number) => x >= 0 && x < 10 && y >= 0 && y < 10;
         const hashPoint = (p: Point) => `${p.x},${p.y}`;
 
-        const goalPointHash = hashPoint(posToCell(goal));
+        const goalPointHash = hashPoint(goal);
         const directions = [
             { x: 0, y: -1 }, // up
             { x: 1, y: 0 }, // right
