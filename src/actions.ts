@@ -11,7 +11,7 @@ class MoveAction {
             return;
         }
 
-        this.destination = destination;
+        this.destination = { x: destination.x / 30, y: destination.y / 30 };
     }
 }
 
@@ -25,7 +25,7 @@ class ShootAction {
             return;
         }
 
-        this.pos = position;
+        this.pos = { x: position.x / 30, y: position.y / 30 };
     }
 }
 
