@@ -1,13 +1,13 @@
 import type { Action } from "./actions";
 import { MoveAction, SaveAction, ShootAction, SwitchWeaponAction } from "./actions";
-import type { GameState, MapState } from "./types";
+import type { Coin, GameState, MapState, Point } from "./types";
 import Weapons from "./weapons";
 
 /**
  * (fr) Cette classe représente votre bot. Vous pouvez y définir des attributs et des méthodes qui
  *      seront conservées entre chaque appel de la méthode `on_tick`.
  */
-class MyBot {
+export class MyBot {
     private name = "Isabella";
     private state: null | MapState = null;
 
@@ -40,12 +40,28 @@ class MyBot {
      *      - BladeRotateAction(rad)    Si vous avez la lame comme arme, vous pouver mettre votre arme
      *                                  à la rotation donnée en radian.
      */
-    on_tick(game_state: GameState): Action[] {
-        console.log("🚀 ~ MyBot ~ on_tick ~ game_state:", game_state);
-        console.log(`Current tick: ${game_state.tick}`);
+    on_tick(gameState: GameState): Action[] {
+        console.log("🚀 ~ MyBot ~ on_tick ~ game_state:", gameState);
+        console.log(`Current tick: ${gameState.tick}`);
+
+        const isabella = gameState.players.find((p) => p.name === this.name);
+        if (!isabella) {
+            console.error("NO PLAYER???!?!");
+            return [];
+        }
+
+        let closestCoinDistance!: number;
+        let closestCoin!: Coin;
+        for (const coin of gameState.coins) {
+            const dist = distance(coin.pos, isabella.pos);
+            if (!closestCoin || dist < closestCoinDistance) {
+                closestCoinDistance = dist;
+                closestCoin = coin;
+            }
+        }
 
         return [
-            new MoveAction({ x: 10.0, y: 11.34 }),
+            new MoveAction(closestCoin.pos),
             new ShootAction({ x: 11.2222, y: 13.547 }),
             new SwitchWeaponAction(Weapons.Blade),
             new SaveAction(new TextEncoder().encode("Hello, world!")),
@@ -59,6 +75,7 @@ class MyBot {
     on_start(state: MapState) {
         console.log("🚀 ~ MyBot ~ on_start ~ state:", state);
         this.state = state;
+        state.map;
     }
 
     /**
@@ -71,4 +88,6 @@ class MyBot {
     }
 }
 
-export { MyBot };
+function distance(p1: Point, p2: Point) {
+    return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+}
