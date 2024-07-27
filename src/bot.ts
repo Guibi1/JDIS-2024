@@ -10,6 +10,9 @@ import Weapons from "./weapons.js";
 export class MyBot {
     private name = "Isabella";
     private state: null | MapState = null;
+    private move: MoveAction;
+    private oldPos: Point;
+    private map: Walls[][];
 
     constructor() {
         this.name = "Isabella";
@@ -70,7 +73,37 @@ export class MyBot {
             { player: gameState.players[0], dist: Number.POSITIVE_INFINITY },
         ).player;
 
+        isabella.pos.y += 1;
+        if (this.oldPos === isabella.pos) {
+            const cellX = isabella.pos.x / 20;
+            const cellY = isabella.pos.y / 20;
+
+            const roundedCellX = Math.floor(cellX);
+            const roundedCellY = Math.floor(cellY);
+
+            const differenceX = cellX - roundedCellX;
+            const differenceY = cellY - roundedCellY;
+
+            if (differenceX <= 0.1) {
+                this.map[roundedCellX][roundedCellY].left = true;
+                this.map[roundedCellX - 1][roundedCellY].right = true;
+            } else if (differenceX >= 0.9) {
+                this.map[roundedCellX][roundedCellY].right = true;
+                this.map[roundedCellX + 1][roundedCellY].left = true;
+            } else if (differenceY <= 0.1) {
+                this.map[roundedCellX][roundedCellY].bottom = true;
+                this.map[roundedCellX][roundedCellY - 1].top = true;
+            } else if (differenceY >= 0.9) {
+                this.map[roundedCellX][roundedCellY].top = true;
+                this.map[roundedCellX][roundedCellY + 1].bottom = true;
+            }
+        } else {
+            this.move = new MoveAction(isabella.pos);
+        }
+
+        this.oldPos = isabella.pos;
         return [
+            this.move,
             new MoveAction(closestCoin.pos),
             new SwitchWeaponAction(Weapons.Canon),
             new ShootAction(closestPlayer.pos),
@@ -84,7 +117,14 @@ export class MyBot {
     on_start(state: MapState) {
         console.log("🚀 ~ MyBot ~ on_start ~ state:", state);
         this.state = state;
+        this.move = new MoveAction({ x: 0, y: 0 });
         state.map;
+
+        this.map = new Array(20).map((_, x) => {
+            return new Array(20).map((_, y) => {
+                return { top: y === 0, left: x === 0, right: x === 19, bottom: y === 19 };
+            });
+        });
     }
 
     /**
@@ -100,3 +140,5 @@ export class MyBot {
 function distance(p1: Point, p2: Point) {
     return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
 }
+
+type Walls = { top: boolean; left: boolean; right: boolean; bottom: boolean };
