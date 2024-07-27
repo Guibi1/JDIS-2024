@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { promises as fs } from "fs";
 
 import { WebSocket } from "ws";
 import { MyBot } from "../src/bot.js";
@@ -9,6 +9,7 @@ const load_wasm = async () => {
 
     const go = new Go();
     const { instance } = await WebAssembly.instantiate(wasmBuffer, go.importObject);
+
     go.run(instance);
 };
 
@@ -45,7 +46,7 @@ class Socket {
 
         this.#ws.on("open", () => this.#on_open());
         this.#ws.on("message", (message) => this.#on_message(message));
-        this.#ws.on("close", () => this.#on_close());
+        this.#ws.on("close", (e) => this.#on_close(e));
         this.#ws.on("error", (error) => this.#on_error(error));
     }
 
@@ -68,7 +69,7 @@ class Socket {
                     this.#bot.on_end();
                     break;
 
-                case 1: {
+                case 1:
                     const actions = this.#bot.on_tick({
                         tick: data.tick,
                         round: data.round,
@@ -85,7 +86,6 @@ class Socket {
                     prefixed_message.set(buffer, prefix.length);
                     this.#ws.send(prefixed_message.buffer);
                     break;
-                }
             }
         } catch (error) {
             console.error(error);
@@ -93,12 +93,12 @@ class Socket {
     }
 
     #on_error(error) {
-        console.log(`Websocket error: ${JSON.stringify(error)} ${error.message}`);
+        console.log(`Websocket error: ${error}`);
         this.#stop_heartbeat();
     }
 
-    #on_close() {
-        console.log("Websocket connection closed");
+    #on_close(e) {
+        console.log("Websocket connection closed", e);
         this.#stop_heartbeat();
     }
 
@@ -123,29 +123,30 @@ class Socket {
 const encode_actions = (actions) => {
     const data = {};
 
-    for (const action of actions) {
-        if (action === null) return;
+    actions &&
+        actions.forEach((action) => {
+            if (action === null) return;
 
-        switch (action.type) {
-            case "dest":
-                data[action.type] = action.destination;
-                break;
-            case "shoot":
-                data[action.type] = action.pos;
-                break;
-            case "save":
-                data[action.type] = btoa(String.fromCharCode.apply(null, action.data));
-                break;
-            case "switch":
-                data[action.type] = action.weapon;
-                break;
-            case "rotate_blade":
-                data[action.type] = action.rad;
-                break;
-            default:
-                break;
-        }
-    }
+            switch (action.type) {
+                case "dest":
+                    data[action.type] = action.destination;
+
+                    break;
+                case "shoot":
+                    data[action.type] = action.pos;
+                    break;
+                case "save":
+                    data[action.type] = btoa(String.fromCharCode.apply(null, action.data));
+                    break;
+                case "switch":
+                    data[action.type] = action.weapon;
+                    break;
+                case "rotate_blade":
+                    data[action.type] = action.rad;
+                default:
+                    break;
+            }
+        });
 
     return JSON.stringify(data);
 };

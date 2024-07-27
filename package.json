@@ -5,8 +5,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "bun run .",
-    "start": "bun run . -r"
+    "dev": "tsc && node index.js -s 43af4d1f-26c6-42a8-baa3-2d036a22d375",
+    "start": "tsc && node index.js -r -s 43af4d1f-26c6-42a8-baa3-2d036a22d375",
+    "clear": "rm src/*.js"
   },
   "author": "",
   "license": "ISC",
@@ -17,7 +18,8 @@
   "types": "./types/type.d.ts",
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
-    "bun-types":"^1.1.21"
+    "bun-types": "^1.1.21",
+    "typescript": "^5.5.4"
   },
   "trustedDependencies": [
     "@biomejs/biome"

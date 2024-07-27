@@ -2,8 +2,8 @@ import type { Point } from "./types";
 import type { Weapon } from "./weapons";
 
 class MoveAction {
-    type: "dest";
-    destination: Point;
+    type = "dest";
+    destination!: Point;
 
     constructor(destination: Point) {
         if (typeof destination.x !== "number" || typeof destination.y !== "number") {
@@ -17,7 +17,7 @@ class MoveAction {
 
 class ShootAction {
     type = "shoot";
-    pos: Point;
+    pos!: Point;
 
     constructor(position: Point) {
         if (typeof position.x !== "number" || typeof position.y !== "number") {
@@ -31,7 +31,7 @@ class ShootAction {
 
 class SaveAction {
     type = "save";
-    data: Uint8Array;
+    data!: Uint8Array;
 
     constructor(data: Uint8Array) {
         if (!(data instanceof Uint8Array)) {
@@ -45,7 +45,7 @@ class SaveAction {
 
 class SwitchWeaponAction {
     type = "switch";
-    weapon: Weapon;
+    weapon!: Weapon;
 
     constructor(weapon: Weapon) {
         if (typeof weapon !== "number") {
@@ -59,7 +59,7 @@ class SwitchWeaponAction {
 
 class BladeRotateAction {
     type = "rotate_blade";
-    rad: number;
+    rad!: number;
 
     constructor(rad: number) {
         if (typeof rad !== "number") {

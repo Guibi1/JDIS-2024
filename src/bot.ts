@@ -1,7 +1,7 @@
-import type { Action } from "./actions";
-import { MoveAction, SaveAction, ShootAction, SwitchWeaponAction } from "./actions";
-import type { Coin, GameState, MapState, Point } from "./types";
-import Weapons from "./weapons";
+import type { Action } from "./actions.js";
+import { MoveAction, SaveAction, ShootAction, SwitchWeaponAction } from "./actions.js";
+import type { Coin, GameState, MapState, Point } from "./types.js";
+import Weapons from "./weapons.js";
 
 /**
  * (fr) Cette classe représente votre bot. Vous pouvez y définir des attributs et des méthodes qui
