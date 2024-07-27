@@ -10,7 +10,6 @@ import type { GameState, MapState, Point, Walls } from "./types.js";
 export class MyBot {
     private name = "Isabella";
     private state: null | MapState = null;
-    private move!: MoveAction;
     private oldPos!: Point;
     private map!: Walls[][];
 
@@ -74,12 +73,12 @@ export class MyBot {
             },
             { player: gameState.players[0], dist: Number.POSITIVE_INFINITY },
         );
-        console.log("🚀 ~ MyBot ~ on_tick ~ closestPlayer:", closestPlayer.player.name);
+        console.log("ClosestPlayer:", closestPlayer.player.name);
+        console.log("Positions:", this.oldPos, isabella.pos);
 
-        isabella.pos.y += 1;
-        if (this.oldPos === isabella.pos) {
-            const cellX = isabella.pos.x / 20;
-            const cellY = isabella.pos.y / 20;
+        if (equals(this.oldPos, isabella.pos)) {
+            const cellX = isabella.pos.x / 300;
+            const cellY = isabella.pos.y / 300;
 
             const roundedCellX = Math.floor(cellX);
             const roundedCellY = Math.floor(cellY);
@@ -87,27 +86,53 @@ export class MyBot {
             const differenceX = cellX - roundedCellX;
             const differenceY = cellY - roundedCellY;
 
-            if (differenceX <= 0.1) {
-                this.map[roundedCellX][roundedCellY].left = true;
-                this.map[roundedCellX - 1][roundedCellY].right = true;
-            } else if (differenceX >= 0.9) {
-                this.map[roundedCellX][roundedCellY].right = true;
-                this.map[roundedCellX + 1][roundedCellY].left = true;
-            } else if (differenceY <= 0.1) {
-                this.map[roundedCellX][roundedCellY].bottom = true;
-                this.map[roundedCellX][roundedCellY - 1].top = true;
-            } else if (differenceY >= 0.9) {
-                this.map[roundedCellX][roundedCellY].top = true;
-                this.map[roundedCellX][roundedCellY + 1].bottom = true;
+            const cell = posToCell(isabella.dest);
+            const isaCell = posToCell(isabella.pos);
+            const [dx, dy] = [cell.x - isaCell.x, cell.y - isaCell.y];
+
+            if (dx !== 0) {
+                if (differenceX <= 0.16) {
+                    this.map[roundedCellX][roundedCellY].left = true;
+                } else if (differenceX >= 0.84) {
+                    this.map[roundedCellX][roundedCellY].right = true;
+                }
+            } else if (dy !== 0) {
+                if (differenceY <= 0.16) {
+                    this.map[roundedCellX][roundedCellY].top = true;
+                } else if (differenceY >= 0.84) {
+                    this.map[roundedCellX][roundedCellY].bottom = true;
+                }
             }
-        } else {
-            this.move = new MoveAction(isabella.pos);
         }
+
+        const getRealWorldCoords = (cell: Point | null) => {
+            if (!cell) return null;
+
+            // Go to coin
+            if (equals(cell, posToCell(closestCoin.pos))) {
+                console.log("ok coin time");
+                return closestCoin.pos;
+            }
+
+            const isaCell = posToCell(isabella.pos);
+            const [dx, dy] = [cell.x - isaCell.x, cell.y - isaCell.y];
+            if (dx === 0) {
+                const x = Math.min(Math.max(isabella.pos.x, cell.x * 300 + 50), cell.x * 300 + 250);
+                return { x, y: cell.y * 300 + 150 };
+            }
+            if (dy === 0) {
+                const y = Math.min(Math.max(isabella.pos.y, cell.y * 300 + 50), cell.y * 300 + 250);
+                return { x: cell.x * 300 + 150, y };
+            }
+
+            return { x: cell.x * 300 + 150, y: cell.y * 300 + 150 };
+        };
 
         this.oldPos = isabella.pos;
         return [
-            this.move,
-            new MoveAction(closestCoin.pos),
+            // this.move,
+            new MoveAction(getRealWorldCoords(this.bfs(isabella.pos, closestCoin.pos)) || closestCoin.pos),
+            // new MoveAction(closestCoin.pos),
             // new SwitchWeaponAction(Weapons.Canon),
             new ShootAction(
                 calculateInterceptionPoint(isabella.pos, closestPlayer.player.pos, closestPlayer.player.dest),
@@ -121,12 +146,10 @@ export class MyBot {
      */
     on_start(state: MapState) {
         this.state = state;
-        this.move = new MoveAction({ x: 0, y: 0 });
-        state.map;
+        this.oldPos = { x: -1, y: -1 };
 
-        this.map = new Array(20).map((_, x) => {
-
-            return new Array(20).map((_, y) => {
+        this.map = [...new Array(10)].map((_, x) => {
+            return [...new Array(10)].map((_, y) => {
                 return { top: y === 0, left: x === 0, right: x === 19, bottom: y === 19 };
             });
         });
@@ -140,34 +163,50 @@ export class MyBot {
         this.state = null;
     }
 
-    bfs(start: Point, goal: Point): Point[] {
-        const queue: { pos: Point; path: Point[] }[] = [{ pos: start, path: [] }];
+    bfs(start: Point, goal: Point): Point | null {
+        const queue: { pos: Point; path: Point[] }[] = [{ pos: posToCell(start), path: [] }];
         const visited = new Set<string>();
 
+        const inBounds = (x: number, y: number) => x >= 0 && x < 10 && y >= 0 && y < 10;
+        const hashPoint = (p: Point) => `${p.x},${p.y}`;
+
+        const goalPointHash = hashPoint(posToCell(goal));
         const directions = [
             { x: 0, y: -1 }, // up
             { x: 1, y: 0 }, // right
             { x: 0, y: 1 }, // down
-            { x: -1, y: 0 } // left
+            { x: -1, y: 0 }, // left
         ];
 
-        const inBounds = (x: number, y: number) => x >= 0 && x < 20 && y >= 0 && y < 20;
-        const hashPoint = (p: Point) => `${p.x},${p.y}`;
-
         while (queue.length > 0) {
-            const { pos, path } = queue.shift();
-            if (hashPoint(pos) === hashPoint(goal)) return path;
+            const currentCell = queue.shift();
+            if (!currentCell) {
+                console.log("empty :(");
+                return null;
+            }
+
+            if (hashPoint(currentCell.pos) === goalPointHash) {
+                console.log("FOUND: ", currentCell);
+                // FOUND PATH!
+                return currentCell.path[0] || currentCell.pos;
+            }
 
             for (const dir of directions) {
-                const newPos = { x: pos.x + dir.x, y: pos.y + dir.y };
-                if (inBounds(newPos.x, newPos.y) && !visited.has(hashPoint(newPos)) && this.isPassable(pos, newPos)) {
-                    visited.add(hashPoint(newPos));
-                    queue.push({ pos: newPos, path: [...path, newPos] });
+                const newCell = { x: currentCell.pos.x + dir.x, y: currentCell.pos.y + dir.y };
+
+                if (
+                    inBounds(newCell.x, newCell.y) &&
+                    !visited.has(hashPoint(newCell)) &&
+                    this.isPassable(currentCell.pos, newCell)
+                ) {
+                    visited.add(hashPoint(newCell));
+                    queue.push({ pos: newCell, path: [...currentCell.path, newCell] });
                 }
             }
         }
 
-        return [];
+        console.log("Nop wtf");
+        return null;
     }
 
     isPassable(current: Point, next: Point): boolean {
@@ -178,6 +217,14 @@ export class MyBot {
         if (dy === -1) return !this.map[current.x][current.y].top && !this.map[next.x][next.y].bottom;
         return false;
     }
+}
+
+function equals(pos1: Point, pos2: Point) {
+    return pos1.x === pos2.x && pos1.y === pos2.y;
+}
+
+function posToCell(pos: Point) {
+    return { x: Math.floor(pos.x / 300), y: Math.floor(pos.y / 300) };
 }
 
 function distance(p1: Point, p2: Point) {
